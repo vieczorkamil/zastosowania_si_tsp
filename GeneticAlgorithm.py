@@ -3,7 +3,8 @@ import copy
 
 
 class GeneticAlgorithm:
-    def __init__(self, population_size, crossover_probability, mutation_probability, iterations, dataset_file, tournament_size):
+    def __init__(self, population_size: int, crossover_probability: float, mutation_probability: float, 
+                 iterations: int, dataset_file: str, tournament_size: int) -> None:
         self.population_size = population_size
         self.crossover_probability = crossover_probability
         self.mutation_probability = mutation_probability
