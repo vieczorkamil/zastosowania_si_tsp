@@ -1,19 +1,23 @@
 import random
-import copy
 
 
 class GeneticAlgorithm:
-    def __init__(self, population_size: int, crossover_probability: float, mutation_probability: float, 
+    def __init__(self, population_size: int, crossover_probability: float, 
+                 mutation_swap_probability: float, mutation_inversion_probability: float, 
                  iterations: int, dataset_file: str, tournament_size: int) -> None:
         self.population_size = population_size
         self.crossover_probability = crossover_probability
-        self.mutation_probability = mutation_probability
+        self.mutation_swap_probability = mutation_swap_probability
+        self.mutation_inversion_probability = mutation_inversion_probability
         self.iterations = iterations
         self.dataset_file = dataset_file
         self.tournament_size = tournament_size
         self.distances = self.load_distances(self.dataset_file)
         self.path_size = len(self.distances)
         self.population = self.generate_population()
+
+        self.best_distance = None
+        self.best_path = None
 
 
     def load_distances(self, path: str) -> list[list[int]]:
@@ -30,6 +34,7 @@ class GeneticAlgorithm:
                 row.append(other_row[i])
         return distances
     
+
     def print_distance(self, city_index: int, destination_index: int) -> None:
         print(self.distances[city_index][destination_index])
 
@@ -124,56 +129,58 @@ class GeneticAlgorithm:
         return population
     
 
-    def get_n_best(self, population: list[list[int]], n: int) -> list[list[int]]:
-        scores = []
+    def inversion_mutation(self, probability: float, population: list[list[int]]) -> list[list[int]]:
         for path in population:
-            scores.append((path, self.calculate_distance(path)))
-        scores.sort(key=lambda x: x[1])
-        new_population = []
-        for i in range(n):
-            new_population.append(scores[i][0])
-        return new_population
-
-
-    def partial_replacement_succession(self, old_population: list[list[int]], new_population: list[list[int]], ratio: float) -> list[list[int]]:
-        from_new = int(len(new_population) * ratio)
-        from_old = len(new_population) - from_new
-        return self.get_n_best(new_population, from_new) + self.get_n_best(old_population, from_old)
+            if random.random() < probability:
+                x1 = random.randint(0, len(path) - 2)
+                x2 = random.randint(x1, len(path) - 1)
+                path[x1:x2] = reversed(path[x1:x2])
+        return population
 
 
     def run_genetic_algorithm(self):
         stagnation_iteration = 0
         try:
             __crossover_probability = self.crossover_probability
-            __mutation_probability = self.mutation_probability
+            __mutation_swap_probability = self.mutation_swap_probability
+            __mutation_inversion_probability = self.mutation_inversion_probability
             previous_best_distance = None
             for iteration in range(self.iterations):
-                if stagnation_iteration >= 1000:
-                    __mutation_probability = random.uniform(0.7, 0.99)
-                    __crossover_probability = random.uniform(0.2, 0.4)
+                if stagnation_iteration >= 50:
+                    __mutation_swap_probability = random.uniform(0.7, 0.9)
+                    __crossover_probability = random.uniform(0.01, 0.2)
+                    __mutation_inversion_probability = random.uniform(0.01, 0.2)
                     stagnation_iteration = 0
-                old_pop = copy.deepcopy(self.population)
+
                 self.population = self.tournament_selection(self.population)
                 self.population = self.pmx_crossover(__crossover_probability, self.population)
-                self.population = self.swap_mutation(__mutation_probability, self.population)
-                self.population = self.partial_replacement_succession(old_pop, self.population, 0.75)
+                self.population = self.swap_mutation(__mutation_swap_probability, self.population)
+                self.population = self.inversion_mutation(__mutation_inversion_probability, self.population)
                 best_path = self.get_best_from_population(self.population)
                 best_distance = self.calculate_distance(best_path)
+
                 if best_distance == previous_best_distance:
                     stagnation_iteration += 1
                 else:
                     previous_best_distance = best_distance
-                    __crossover_probability = self.crossover_probability
-                    __mutation_probability = self.mutation_probability
                     stagnation_iteration = 0
-                print(f"Iteration: {iteration}. Distance: {best_distance}   ", end="\r")
+
+                if iteration == 0:
+                    self.best_distance = best_distance
+                    self.best_path = best_path
+                else:
+                    if best_distance < self.best_distance:
+                        self.best_distance = best_distance
+                        self.best_path = best_path
+
+                print(f"Iteration: {iteration}. Distance: {self.best_distance}   ", end="\r")
         except KeyboardInterrupt:
-            print(f"Break at iteration num: {iteration}")
+            print(f"Break at iteration num: {iteration}                  ")
         finally:
             print("------------------------------------------------------")
-            print(f"Best path found: {best_path}")
-            print(f"The distance was: {best_distance}")
-            print(len(best_path), len(best_path) == len(set(best_path)))
+            print(f"Best path found: {self.best_path}")
+            print(f"The distance was: {self.best_distance}")
+            # print(len(self.best_path), len(self.best_path) == len(set(self.best_path))) #DEBUG:
             print("------------------------------------------------------")
 
 
