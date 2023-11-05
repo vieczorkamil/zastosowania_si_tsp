@@ -13,6 +13,7 @@ class GeneticAlgorithm:
         self.tournament_size = tournament_size
         self.distances = self.load_distances(self.dataset_file)
         self.path_size = len(self.distances)
+        self.population = self.generate_population()
 
 
     def load_distances(self, path: str) -> list[list[int]]:
@@ -65,10 +66,10 @@ class GeneticAlgorithm:
         best_distance = None
         for path in population:
             if best == None:
-                best = path
-                best_distance = self.calculate_distance(path)
+                best = path.copy()
+                best_distance = self.calculate_distance(path) 
             elif self.calculate_distance(path) < best_distance:
-                best = path
+                best = path.copy()
                 best_distance = self.calculate_distance(path)
         return best
 
@@ -83,39 +84,30 @@ class GeneticAlgorithm:
                 new_population.append(parent1)
                 continue
 
-            # Check if crossover should be performed based on the given probability
             if random.random() > probability:
                 new_population.append(parent1)
                 new_population.append(parent2)
                 continue
 
-            size = len(parent1)
-            child1 = [None] * size
-            child2 = [None] * size
+            crossover_point1 = random.randint(0, len(parent1) - 2)
+            crossover_point2 = random.randint(crossover_point1 + 1, len(parent1) - 1)
 
-            # Choose crossover points
-            crossover_point1 = random.randint(0, size - 1)
-            crossover_point2 = random.randint(crossover_point1, size - 1)
+            child1, child2 = parent1[:], parent2[:]
 
-            # Copy the segment from crossover_point1 to crossover_point2 from parents to children without changes
-            child1[crossover_point1:crossover_point2 + 1] = parent1[crossover_point1:crossover_point2 + 1]
-            child2[crossover_point1:crossover_point2 + 1] = parent2[crossover_point1:crossover_point2 + 1]
+            # Create mapping between parents
+            mapping = {parent1[i]: parent2[i] for i in range(crossover_point1, crossover_point2)}
+            for i in range(len(child1)):
+                if crossover_point1 <= i < crossover_point2:
+                    continue
+                while child1[i] in mapping:
+                    child1[i] = mapping[child1[i]]
 
-            # Map the remaining segments of children from the other parent
-            for i in range(size):
-                if child1[i] is None:
-                    mapping = parent2[i]
-                    while mapping in child1[crossover_point1:crossover_point2 + 1]:
-                        index = parent2.index(mapping)
-                        mapping = parent1[index]
-                    child1[i] = mapping
-
-                if child2[i] is None:
-                    mapping = parent1[i]
-                    while mapping in child2[crossover_point1:crossover_point2 + 1]:
-                        index = parent1.index(mapping)
-                        mapping = parent2[index]
-                    child2[i] = mapping
+            mapping = {parent2[i]: parent1[i] for i in range(crossover_point1, crossover_point2)}
+            for i in range(len(child2)):
+                if crossover_point1 <= i < crossover_point2:
+                    continue
+                while child2[i] in mapping:
+                    child2[i] = mapping[child2[i]]
 
             new_population.append(child1)
             new_population.append(child2)
@@ -152,7 +144,6 @@ class GeneticAlgorithm:
     def run_genetic_algorithm(self):
         stagnation_iteration = 0
         try:
-            population = self.generate_population()
             __crossover_probability = self.crossover_probability
             __mutation_probability = self.mutation_probability
             previous_best_distance = None
@@ -161,12 +152,12 @@ class GeneticAlgorithm:
                     __mutation_probability = random.uniform(0.7, 0.99)
                     __crossover_probability = random.uniform(0.2, 0.4)
                     stagnation_iteration = 0
-                old_pop = copy.deepcopy(population)
-                population = self.tournament_selection(population)
-                population = self.pmx_crossover(__crossover_probability, population)
-                population = self.swap_mutation(__mutation_probability, population)
-                population = self.partial_replacement_succession(old_pop, population, 0.75)
-                best_path = self.get_best_from_population(population)
+                old_pop = copy.deepcopy(self.population)
+                self.population = self.tournament_selection(self.population)
+                self.population = self.pmx_crossover(__crossover_probability, self.population)
+                self.population = self.swap_mutation(__mutation_probability, self.population)
+                self.population = self.partial_replacement_succession(old_pop, self.population, 0.75)
+                best_path = self.get_best_from_population(self.population)
                 best_distance = self.calculate_distance(best_path)
                 if best_distance == previous_best_distance:
                     stagnation_iteration += 1
@@ -175,7 +166,7 @@ class GeneticAlgorithm:
                     __crossover_probability = self.crossover_probability
                     __mutation_probability = self.mutation_probability
                     stagnation_iteration = 0
-                print(f"Iteration: {iteration}", end="\r")
+                print(f"Iteration: {iteration}. Distance: {best_distance}   ", end="\r")
         except KeyboardInterrupt:
             print(f"Break at iteration num: {iteration}")
         finally:

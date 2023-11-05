@@ -5,10 +5,10 @@ import argparse
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--population_size", type=int, default=11, help="Size of population") 
+    parser.add_argument("--population_size", type=int, default=100, help="Size of population") 
     parser.add_argument("--crossover_probability", type=float, default=0.9, help="Probability of crossover")
     parser.add_argument("--mutation_probability", type=float, default=0.1, help="Probability of mutation") 
-    parser.add_argument("--iterations", type=int, default=10000, help="Number of iterations") 
+    parser.add_argument("--iterations", type=int, default=1000, help="Number of iterations") 
     parser.add_argument("--dataset_file", type=str, default="berlin52.txt", help="Text file with dataset")
     parser.add_argument("--tournament_size", type=int, default=70, help="Size of tournament")  
     args = parser.parse_args()
